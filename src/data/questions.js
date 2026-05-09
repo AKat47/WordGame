@@ -2,16 +2,19 @@ import { VOCAB_BOOKS } from "./vocab";
 
 /* ─── Helpers ────────────────────────────────────────────────────── */
 
-/** Pick `n` random items from an array, excluding a specific value */
-function pickRandom(arr, n, exclude = null) {
-  const pool = arr.filter(x => x !== exclude);
-  const shuffled = [...pool].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, n);
+/** Fisher-Yates shuffle — unbiased */
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }
 
-/** Shuffle an array */
-function shuffle(arr) {
-  return [...arr].sort(() => Math.random() - 0.5);
+/** Pick `n` random items from an array, excluding a specific value */
+function pickRandom(arr, n, exclude = null) {
+  return shuffle(arr.filter(x => x !== exclude)).slice(0, n);
 }
 
 /** Build a scrambled letter bank for the spell game */
@@ -37,6 +40,7 @@ function makePictureQuestion(wordObj, allWords) {
   return {
     type: "picture",
     word: wordObj.word,
+    meaning: wordObj.meaning,
     hint: wordObj.sentence,
     correct: wordObj.word,
     praise: `Yes! "${wordObj.word}" means ${wordObj.meaning}.`,
@@ -184,24 +188,20 @@ function makeQuestion(type, wordObj, allWords) {
 export function buildTypedQuestions(lesson = null, type = "mix", count = 5) {
   const targetLesson = lesson ?? VOCAB_BOOKS[0].lessons[0];
   const words = targetLesson.words;
-  const shuffled = shuffle(words);
+
+  // Pick `count` unique words at random (no repeats within a session)
+  const picked = shuffle(words).slice(0, count);
 
   if (type === "mix") {
-    // Cycle through all 5 game types so each round feels different
     const mixTypes = shuffle(["picture", "definition", "listen", "spell", "fill"]);
-    return Array.from({ length: count }, (_, i) =>
-      makeQuestion(mixTypes[i % mixTypes.length], shuffled[i % shuffled.length], words)
+    return picked.map((wordObj, i) =>
+      makeQuestion(mixTypes[i % mixTypes.length], wordObj, words)
     );
   }
 
   if (type === "hangman") {
-    return Array.from({ length: count }, (_, i) =>
-      makeHangmanQuestion(shuffled[i % shuffled.length])
-    );
+    return picked.map(wordObj => makeHangmanQuestion(wordObj));
   }
 
-  // Single game type — vary the word each round
-  return Array.from({ length: count }, (_, i) =>
-    makeQuestion(type, shuffled[i % shuffled.length], words)
-  );
+  return picked.map(wordObj => makeQuestion(type, wordObj, words));
 }

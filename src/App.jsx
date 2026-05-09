@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
 import { FONT_SANS } from "./data/themes";
 import LessonScreen  from "./screens/LessonScreen";
-import AddWordsScreen from "./screens/AddWordsScreen";
+import MyWordsScreen  from "./screens/MyWordsScreen";
 
 const GLOBAL_CSS = `
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -15,7 +15,7 @@ const GLOBAL_CSS = `
 
 function AppInner() {
   const { theme: t } = useTheme();
-  const [screen, setScreen] = useState("lesson"); // "lesson" | "addwords"
+  const [screen, setScreen] = useState("lesson"); // "lesson" | "mywords"
 
   return (
     <>
@@ -34,8 +34,8 @@ function AppInner() {
           display: "flex", flexDirection: "column",
           background: t.bg, position: "relative",
         }}>
-          {screen === "lesson"   && <LessonScreen   onGoAddWords={() => setScreen("addwords")}/>}
-          {screen === "addwords" && <AddWordsScreen  onBack={() => setScreen("lesson")}/>}
+          {screen === "lesson"  && <LessonScreen  onGoAddWords={() => setScreen("mywords")}/>}
+          {screen === "mywords" && <MyWordsScreen onBack={() => setScreen("lesson")}/>}
         </div>
       </div>
     </>

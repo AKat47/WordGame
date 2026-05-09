@@ -2,7 +2,8 @@ import "dotenv/config";
 import express    from "express";
 import cors       from "cors";
 import mongoose   from "mongoose";
-import { Progress } from "./models/Progress.js";
+import { Progress }  from "./models/Progress.js";
+import { UserWords } from "./models/UserWords.js";
 
 /* ── Config ──────────────────────────────────────────────────────── */
 const PORT      = process.env.PORT      || 3001;
@@ -45,6 +46,32 @@ app.put("/api/progress/:userId", async (req, res) => {
     res.json(doc.data);
   } catch (err) {
     console.error("PUT progress error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* ── GET /api/words/:userId ──────────────────────────────────────── */
+app.get("/api/words/:userId", async (req, res) => {
+  try {
+    const doc = await UserWords.findOne({ userId: req.params.userId });
+    res.json(doc ? doc.words : []);
+  } catch (err) {
+    console.error("GET words error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* ── PUT /api/words/:userId  (upsert full list) ──────────────────── */
+app.put("/api/words/:userId", async (req, res) => {
+  try {
+    const doc = await UserWords.findOneAndUpdate(
+      { userId: req.params.userId },
+      { $set: { words: req.body } },
+      { upsert: true, new: true, runValidators: true }
+    );
+    res.json(doc.words);
+  } catch (err) {
+    console.error("PUT words error:", err);
     res.status(500).json({ error: err.message });
   }
 });

@@ -24,7 +24,7 @@ export default function MatchPictureGame({ q, onAnswer, answered }) {
         <div style={{ fontSize: 24, fontWeight: 800, color: t.ink, lineHeight: 1.25 }}>{q.word}</div>
       </div>
 
-      {/* Mascot + hint bubble */}
+      {/* Mascot + hint bubble (shows definition, not the sentence) */}
       <div style={{ display: "flex", alignItems: "flex-end", gap: 8, marginBottom: 8 }}>
         <Mascot size={80} mood="think"/>
         <div style={{
@@ -33,7 +33,7 @@ export default function MatchPictureGame({ q, onAnswer, answered }) {
           fontSize: 15, fontStyle: "italic", color: t.inkSoft,
           fontFamily: FONT_SERIF, maxWidth: 220,
         }}>
-          "{q.hint}"
+          {q.meaning}
           <div style={{
             position: "absolute", left: -8, bottom: 14, width: 0, height: 0,
             borderTop: "8px solid transparent", borderBottom: "8px solid transparent",
@@ -60,8 +60,13 @@ export default function MatchPictureGame({ q, onAnswer, answered }) {
               transform: selected ? "translateY(1px)" : "none",
               transition: "transform 80ms",
             }}>
-              <div style={{ fontSize: 56 }}>{opt.emoji}</div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: t.ink }}>{opt.label}</div>
+              <div style={{ fontSize: 56 }}>{opt.emoji || "❓"}</div>
+              {/* Only reveal word label after answering */}
+              {answered && (
+                <div style={{ fontSize: 13, fontWeight: 700, color: isCorrect ? t.sage : isWrong ? t.red : t.inkSoft }}>
+                  {opt.label}
+                </div>
+              )}
             </div>
           );
         })}

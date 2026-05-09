@@ -4,12 +4,14 @@ import { FONT_SERIF, FONT_SANS } from "../data/themes";
 import { VOCAB_BOOKS } from "../data/vocab";
 import { buildTypedQuestions } from "../data/questions";
 import { loadProgress, saveProgress, syncFromServer, recordGameResult, getGameStat } from "../utils/progress";
+import { loadUserWords, syncWordsFromServer } from "../utils/userWords";
 import LessonRunner     from "./LessonRunner";
 import CompletionScreen from "./CompletionScreen";
 import Icon from "../components/Icon";
 
-const LESSON = VOCAB_BOOKS[0].lessons[0];
+const BUILTIN_LESSON = VOCAB_BOOKS[0].lessons[0];
 const ROUNDS = 5;
+const MIN_USER_WORDS = 4; // need ≥4 words for distractors
 
 /* ── Game type cards ─────────────────────────────────────────────── */
 const GAME_CARDS = [
@@ -130,29 +132,42 @@ function ProgressHeader({ progress, synced }) {
 /* ── Main screen ─────────────────────────────────────────────────── */
 export default function LessonScreen({ onGoAddWords }) {
   const { theme: t } = useTheme();
-  const [playing,    setPlaying]    = useState(null); // game type string while in-session
-  const [completion, setCompletion] = useState(null); // { stats, progress } after session
+  const [playing,    setPlaying]    = useState(null);
+  const [completion, setCompletion] = useState(null);
   const [progress,   setProgress]   = useState(() => loadProgress());
-  const [synced,     setSynced]     = useState(false); // true once server responded
+  const [synced,     setSynced]     = useState(false);
+  const [userWords,  setUserWords]  = useState(() => loadUserWords());
+  const [useMyWords, setUseMyWords] = useState(false);
 
-  /* ── Sync from MongoDB on mount ─────────────────────────────────── */
+  /* ── Active lesson — built-in or user's own words ───────────────── */
+  const myWordsLesson = { title: "My Words", words: userWords };
+  const activeLesson  = (useMyWords && userWords.length >= MIN_USER_WORDS)
+    ? myWordsLesson
+    : BUILTIN_LESSON;
+
+  /* ── Sync progress + user words from MongoDB on mount ───────────── */
   useEffect(() => {
     syncFromServer()
       .then(serverData => {
         if (serverData) {
-          // Server is source of truth — update state + local cache
           localStorage.setItem("wordgarden_progress", JSON.stringify(serverData));
           setProgress(serverData);
         }
         setSynced(true);
       })
-      .catch(() => {
-        // Server unreachable (MongoDB down / offline) — keep localStorage data
-        setSynced(true);
-      });
+      .catch(() => setSynced(true));
+
+    syncWordsFromServer()
+      .then(serverWords => {
+        if (serverWords && serverWords.length > 0) {
+          setUserWords(serverWords);
+        }
+      })
+      .catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const getQuestions = (type) => buildTypedQuestions(LESSON, type, ROUNDS);
+  const roundCount  = Math.min(ROUNDS, activeLesson.words.length);
+  const getQuestions = (type) => buildTypedQuestions(activeLesson, type, roundCount);
 
   const handleComplete = (stats) => {
     const updated = recordGameResult(progress, playing, stats);
@@ -212,20 +227,64 @@ export default function LessonScreen({ onGoAddWords }) {
         </div>
       </div>
 
-      {/* Current lesson chip */}
-      <div style={{
-        margin: "12px 16px 0", padding: "10px 16px",
-        background: t.primarySoft, borderRadius: 14,
-        border: `1.5px solid ${t.primary}`,
-        display: "flex", alignItems: "center", gap: 10,
-      }}>
-        <div style={{ fontSize: 24 }}>📚</div>
-        <div>
-          <div style={{ fontSize: 11, fontWeight: 800, color: t.primary, letterSpacing: "1px" }}>CURRENT LESSON</div>
-          <div style={{ fontSize: 15, fontWeight: 800, color: t.ink, fontFamily: FONT_SERIF, marginTop: 1 }}>
-            {LESSON.title} · {LESSON.words.length} words · {ROUNDS} rounds each
+      {/* Lesson selector */}
+      <div style={{ margin: "12px 16px 0", display: "flex", flexDirection: "column", gap: 8 }}>
+        {/* Built-in lesson pill */}
+        <div
+          onClick={() => setUseMyWords(false)}
+          style={{
+            padding: "10px 16px",
+            background: !useMyWords ? t.primarySoft : t.card,
+            borderRadius: 14,
+            border: `1.5px solid ${!useMyWords ? t.primary : t.line}`,
+            display: "flex", alignItems: "center", gap: 10,
+            cursor: "pointer",
+          }}
+        >
+          <div style={{ fontSize: 24 }}>📚</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: !useMyWords ? t.primary : t.inkSoft, letterSpacing: "1px" }}>BUILT-IN LESSON</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: t.ink, fontFamily: FONT_SERIF, marginTop: 1 }}>
+              {BUILTIN_LESSON.title} · {BUILTIN_LESSON.words.length} words · {ROUNDS} rounds
+            </div>
           </div>
+          {!useMyWords && <div style={{ width: 10, height: 10, borderRadius: "50%", background: t.primary, flexShrink: 0 }}/>}
         </div>
+
+        {/* My Words pill — only shown if user has enough words */}
+        {userWords.length >= MIN_USER_WORDS && (
+          <div
+            onClick={() => setUseMyWords(true)}
+            style={{
+              padding: "10px 16px",
+              background: useMyWords ? t.primarySoft : t.card,
+              borderRadius: 14,
+              border: `1.5px solid ${useMyWords ? t.primary : t.line}`,
+              display: "flex", alignItems: "center", gap: 10,
+              cursor: "pointer",
+            }}
+          >
+            <div style={{ fontSize: 24 }}>🌱</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: useMyWords ? t.primary : t.inkSoft, letterSpacing: "1px" }}>MY WORDS</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: t.ink, fontFamily: FONT_SERIF, marginTop: 1 }}>
+                {userWords.length} words · {Math.min(ROUNDS, userWords.length)} rounds
+              </div>
+            </div>
+            {useMyWords && <div style={{ width: 10, height: 10, borderRadius: "50%", background: t.primary, flexShrink: 0 }}/>}
+          </div>
+        )}
+
+        {/* Teaser if user has some but not enough words yet */}
+        {userWords.length > 0 && userWords.length < MIN_USER_WORDS && (
+          <div style={{
+            padding: "8px 14px", borderRadius: 12,
+            background: t.card, border: `1.5px dashed ${t.line}`,
+            fontSize: 12, color: t.inkFaint,
+          }}>
+            🌱 Add {MIN_USER_WORDS - userWords.length} more word{MIN_USER_WORDS - userWords.length !== 1 ? "s" : ""} to unlock My Words games
+          </div>
+        )}
       </div>
 
       {/* Game cards */}

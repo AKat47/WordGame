@@ -104,22 +104,7 @@ export default function FillBlankGame({ q, onAnswer, answered }) {
         </div>
       </div>
 
-      {/* Word being tested */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: t.inkSoft }}>Word:</div>
-        <div style={{
-          background: t.primarySoft, color: t.primaryDeep,
-          padding: "4px 12px", borderRadius: 20,
-          fontWeight: 800, fontSize: 15, fontFamily: FONT_SERIF,
-        }}>
-          {q.word}
-        </div>
-        <div style={{ fontSize: 13, color: t.inkSoft, fontStyle: "italic", flex: 1 }}>
-          — {q.meaning}
-        </div>
-      </div>
-
-      {/* AI-generated sentence card */}
+      {/* Sentence card */}
       {error && (
         <div style={{ fontSize: 11, color: t.inkSoft, fontStyle: "italic", textAlign: "center" }}>
           {error}

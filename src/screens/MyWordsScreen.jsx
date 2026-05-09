@@ -1,22 +1,28 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTheme } from "../context/ThemeContext";
 import { FONT_SERIF, FONT_SANS } from "../data/themes";
 import { VOCAB_BOOKS } from "../data/vocab";
 import Icon from "../components/Icon";
 import BigButton from "../components/BigButton";
 import { fetchDefinition } from "../utils/ai";
+import {
+  loadUserWords,
+  saveUserWords,
+  syncWordsFromServer,
+} from "../utils/userWords";
 
-/* ─── Collect all words from vocab into a flat list ─────────────── */
+/* ─── Collect built-in vocab + persisted user words ─────────────── */
 function getAllWords() {
   const words = [];
   for (const book of VOCAB_BOOKS) {
     for (const lesson of book.lessons) {
       for (const w of lesson.words) {
-        words.push({ ...w, bookTitle: book.title });
+        words.push({ ...w, bookTitle: book.title, builtIn: true });
       }
     }
   }
-  return words;
+  // Prepend user words (stored separately so they survive navigation)
+  return [...loadUserWords(), ...words];
 }
 
 /* ─── Free Dictionary API: fetch definition ──────────────────────── */
@@ -87,6 +93,7 @@ function AddWordSheet({ onAdd, onCancel }) {
   const [word, setWord]       = useState("");
   const [meaning, setMeaning] = useState("");
   const [example, setExample] = useState("");
+  const [emoji, setEmoji]     = useState("");
   const [filling, setFilling] = useState(false);
   const [fillError, setFillError] = useState("");
 
@@ -163,12 +170,38 @@ function AddWordSheet({ onAdd, onCancel }) {
             placeholder="A sentence using this word…"
             multiline
           />
+
+          {/* Emoji picker */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: t.inkSoft, letterSpacing: "1.5px" }}>
+              PICTURE EMOJI (optional)
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <input
+                value={emoji}
+                onChange={e => setEmoji(e.target.value)}
+                placeholder="e.g. 🌟"
+                maxLength={4}
+                style={{
+                  width: 70, padding: "10px 12px",
+                  border: `2px solid ${t.line}`, borderRadius: 10,
+                  background: t.bg, color: t.ink,
+                  fontSize: 24, textAlign: "center",
+                  outline: "none", fontFamily: FONT_SANS,
+                }}
+              />
+              <div style={{ fontSize: 12, color: t.inkSoft, lineHeight: 1.4 }}>
+                Used in the Picture Match game.<br/>
+                Tap and paste any emoji 🎉
+              </div>
+            </div>
+          </div>
         </div>
 
         <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
           <BigButton ghost onClick={onCancel} style={{ flex: 1 }}>Cancel</BigButton>
           <BigButton
-            onClick={() => canAdd && onAdd({ word: word.trim(), meaning: meaning.trim(), sentence: example.trim(), image: "📖" })}
+            onClick={() => canAdd && onAdd({ word: word.trim(), meaning: meaning.trim(), sentence: example.trim(), image: emoji.trim() || "📖" })}
             disabled={!canAdd}
             style={{ flex: 1 }}
           >
@@ -220,17 +253,32 @@ export default function MyWordsScreen({ onBack }) {
   const [search, setSearch]     = useState("");
   const [showAdd, setShowAdd]   = useState(false);
 
+  // Sync from MongoDB on mount — merge server words with any local-only ones
+  useEffect(() => {
+    syncWordsFromServer().then(serverWords => {
+      if (!serverWords || serverWords.length === 0) return;
+      // Save merged list to localStorage so next load is instant
+      saveUserWords(serverWords);
+      setWords(getAllWords());
+    }).catch(() => {/* offline — localStorage already loaded */});
+  }, []);
+
   const filtered = words.filter(w =>
     w.word.toLowerCase().includes(search.toLowerCase()) ||
     w.meaning.toLowerCase().includes(search.toLowerCase())
   );
 
   const handleAdd = (newWord) => {
+    const updated = [newWord, ...loadUserWords()];
+    saveUserWords(updated);
     setWords(ws => [newWord, ...ws]);
     setShowAdd(false);
   };
 
   const handleRemove = (wordStr) => {
+    // Only allow removing user-added words (not built-in vocab)
+    const updatedUser = loadUserWords().filter(w => w.word !== wordStr);
+    saveUserWords(updatedUser);
     setWords(ws => ws.filter(w => w.word !== wordStr));
   };
 
