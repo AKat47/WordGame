@@ -1,8 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
 import { FONT_SANS } from "./data/themes";
 import LessonScreen  from "./screens/LessonScreen";
-import MyWordsScreen  from "./screens/MyWordsScreen";
+import MyWordsScreen from "./screens/MyWordsScreen";
+import StatsScreen   from "./screens/StatsScreen";
+import { loadProgress } from "./utils/progress";
+import { requestNotificationPermission, scheduleDailyReminder } from "./utils/notifications";
 
 const GLOBAL_CSS = `
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -15,7 +18,15 @@ const GLOBAL_CSS = `
 
 function AppInner() {
   const { theme: t } = useTheme();
-  const [screen, setScreen] = useState("lesson"); // "lesson" | "mywords"
+  const [screen,   setScreen]   = useState("lesson"); // "lesson" | "mywords" | "stats"
+  const [progress, setProgress] = useState(() => loadProgress());
+
+  /* ── Request notification permission + schedule daily reminder ─── */
+  useEffect(() => {
+    requestNotificationPermission().then(granted => {
+      if (granted) scheduleDailyReminder(progress.lastPlayedDate);
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <>
@@ -34,8 +45,15 @@ function AppInner() {
           display: "flex", flexDirection: "column",
           background: t.bg, position: "relative",
         }}>
-          {screen === "lesson"  && <LessonScreen  onGoAddWords={() => setScreen("mywords")}/>}
+          {screen === "lesson"  && (
+            <LessonScreen
+              onGoAddWords={() => setScreen("mywords")}
+              onGoStats={() => setScreen("stats")}
+              onProgressChange={setProgress}
+            />
+          )}
           {screen === "mywords" && <MyWordsScreen onBack={() => setScreen("lesson")}/>}
+          {screen === "stats"   && <StatsScreen   progress={progress} onBack={() => setScreen("lesson")} onReset={setProgress}/>}
         </div>
       </div>
     </>

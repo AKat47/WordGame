@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTheme } from "../context/ThemeContext";
 import { FONT_SERIF, FONT_SANS } from "../data/themes";
-import { VOCAB_BOOKS } from "../data/vocab";
 import Icon from "../components/Icon";
 import BigButton from "../components/BigButton";
 import { fetchDefinition } from "../utils/ai";
@@ -11,18 +10,9 @@ import {
   syncWordsFromServer,
 } from "../utils/userWords";
 
-/* ─── Collect built-in vocab + persisted user words ─────────────── */
+/* ─── Only show user-added words here ───────────────────────────── */
 function getAllWords() {
-  const words = [];
-  for (const book of VOCAB_BOOKS) {
-    for (const lesson of book.lessons) {
-      for (const w of lesson.words) {
-        words.push({ ...w, bookTitle: book.title, builtIn: true });
-      }
-    }
-  }
-  // Prepend user words (stored separately so they survive navigation)
-  return [...loadUserWords(), ...words];
+  return loadUserWords();
 }
 
 /* ─── Free Dictionary API: fetch definition ──────────────────────── */
@@ -253,14 +243,14 @@ export default function MyWordsScreen({ onBack }) {
   const [search, setSearch]     = useState("");
   const [showAdd, setShowAdd]   = useState(false);
 
-  // Sync from MongoDB on mount — merge server words with any local-only ones
+  // Sync from MongoDB on mount — only apply if server has MORE words than local
   useEffect(() => {
+    const localWords = loadUserWords();
     syncWordsFromServer().then(serverWords => {
-      if (!serverWords || serverWords.length === 0) return;
-      // Save merged list to localStorage so next load is instant
+      if (!serverWords || serverWords.length <= localWords.length) return;
       saveUserWords(serverWords);
-      setWords(getAllWords());
-    }).catch(() => {/* offline — localStorage already loaded */});
+      setWords(serverWords);
+    }).catch(() => {});
   }, []);
 
   const filtered = words.filter(w =>

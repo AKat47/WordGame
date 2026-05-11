@@ -20,6 +20,7 @@ const DEFAULT_GAME_STAT = {
 
 const DEFAULT_PROGRESS = {
   xp: 0, gems: 0, streak: 0, lastPlayedDate: null, gameStats: {},
+  history: [], // [{ date:"YYYY-MM-DD", type, xp, accuracy, correct, total }]
 };
 
 /* ── User identity (anonymous UUID, persisted in localStorage) ───── */
@@ -106,12 +107,17 @@ export function recordGameResult(progress, type, stats) {
   const prev    = progress.gameStats?.[type] ?? { ...DEFAULT_GAME_STAT };
   const correct = Math.round((stats.accuracy / 100) * stats.words);
 
+  const isoDate = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+  const entry   = { date: isoDate, type, xp: stats.xp, accuracy: stats.accuracy, correct, total: stats.words };
+  const history = [...(progress.history || []), entry].slice(-365); // keep 1 year
+
   return {
     ...progress,
     xp:             progress.xp + stats.xp,
     gems:           progress.gems + Math.floor(stats.xp / 20),
     streak,
     lastPlayedDate: today,
+    history,
     gameStats: {
       ...progress.gameStats,
       [type]: {
