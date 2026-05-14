@@ -5,7 +5,6 @@ import { VOCAB_BOOKS } from "../data/vocab";
 import ProgressBar from "../components/ProgressBar";
 import FeedbackDrawer from "../components/FeedbackDrawer";
 import Icon from "../components/Icon";
-import MatchPictureGame    from "../games/MatchPictureGame";
 import MatchDefinitionGame from "../games/MatchDefinitionGame";
 import ListenTapGame       from "../games/ListenTapGame";
 import SpellGame           from "../games/SpellGame";
@@ -13,13 +12,48 @@ import FillBlankGame       from "../games/FillBlankGame";
 import HangmanGame         from "../games/HangmanGame";
 
 const GAME_MAP = {
-  picture:    MatchPictureGame,
   definition: MatchDefinitionGame,
   listen:     ListenTapGame,
   spell:      SpellGame,
   fill:       FillBlankGame,
   hangman:    HangmanGame,
 };
+
+/* ── Web Audio sound effects (no audio files needed) ─────────────── */
+function playSound(correct) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (correct) {
+      // Pleasant two-note chime: C5 → E5
+      [523.25, 659.25].forEach((freq, i) => {
+        const osc  = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        const t0 = ctx.currentTime + i * 0.13;
+        gain.gain.setValueAtTime(0, t0);
+        gain.gain.linearRampToValueAtTime(0.28, t0 + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.38);
+        osc.start(t0);
+        osc.stop(t0 + 0.38);
+      });
+    } else {
+      // Short low buzz
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sawtooth";
+      osc.frequency.value = 140;
+      gain.gain.setValueAtTime(0.22, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.28);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.28);
+    }
+  } catch { /* audio blocked — silently skip */ }
+}
 
 function LessonHeader({ progress, hearts, onExit }) {
   const { theme: t } = useTheme();
@@ -61,6 +95,7 @@ export default function LessonRunner({ questions: propQuestions, onExit, onCompl
   const progress = idx / questions.length;
 
   const handleAnswer = (correct) => {
+    playSound(correct);
     setAnswered(true);
     if (correct) setCorrect(c => c + 1);
     else         setHearts(h => Math.max(0, h - 1));

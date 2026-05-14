@@ -193,7 +193,7 @@ export function buildTypedQuestions(lesson = null, type = "mix", count = 5) {
   const picked = shuffle(words).slice(0, count);
 
   if (type === "mix") {
-    const mixTypes = shuffle(["picture", "definition", "listen", "spell", "fill"]);
+    const mixTypes = shuffle(["definition", "listen", "spell", "fill", "hangman"]);
     return picked.map((wordObj, i) =>
       makeQuestion(mixTypes[i % mixTypes.length], wordObj, words)
     );
