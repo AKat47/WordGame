@@ -181,7 +181,7 @@ function AddWordSheet({ onAdd, onCancel }) {
                 }}
               />
               <div style={{ fontSize: 12, color: t.inkSoft, lineHeight: 1.4 }}>
-                Used in the Picture Match game.<br/>
+                Optional visual hint for the word.<br/>
                 Tap and paste any emoji 🎉
               </div>
             </div>

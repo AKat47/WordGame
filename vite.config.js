@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
+  cacheDir: "/tmp/vite-word-garden",
   server: {
     proxy: {
       // Forward /api/* from Vite dev server → Express on port 3001

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTheme } from "../context/ThemeContext";
 import { buildTypedQuestions } from "../data/questions";
 import { VOCAB_BOOKS } from "../data/vocab";
@@ -8,14 +8,12 @@ import Icon from "../components/Icon";
 import MatchDefinitionGame from "../games/MatchDefinitionGame";
 import ListenTapGame       from "../games/ListenTapGame";
 import SpellGame           from "../games/SpellGame";
-import FillBlankGame       from "../games/FillBlankGame";
 import HangmanGame         from "../games/HangmanGame";
 
 const GAME_MAP = {
   definition: MatchDefinitionGame,
   listen:     ListenTapGame,
   spell:      SpellGame,
-  fill:       FillBlankGame,
   hangman:    HangmanGame,
 };
 
@@ -82,14 +80,19 @@ export default function LessonRunner({ questions: propQuestions, onExit, onCompl
   const [correctCount, setCorrect] = useState(0);
   const { theme: t } = useTheme();
 
-  if (idx >= questions.length) {
-    onComplete({
-      xp:       20 + correctCount * 6,
-      accuracy: Math.round((correctCount / questions.length) * 100),
-      words:    questions.length,
-    });
-    return null;
-  }
+  const done = idx >= questions.length;
+
+  useEffect(() => {
+    if (done) {
+      onComplete({
+        xp:       20 + correctCount * 6,
+        accuracy: Math.round((correctCount / questions.length) * 100),
+        words:    questions.length,
+      });
+    }
+  }, [done]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (done) return null;
 
   const q        = questions[idx];
   const progress = idx / questions.length;

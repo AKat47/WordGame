@@ -30,25 +30,6 @@ function makeLetterBank(word) {
 
 /* ─── Question builders (one per game type) ──────────────────────── */
 
-function makePictureQuestion(wordObj, allWords) {
-  // Distractor options are other words in the lesson (by emoji/label)
-  const distractors = pickRandom(allWords, 3, wordObj);
-  const options = shuffle([
-    { value: wordObj.word, emoji: wordObj.image, label: wordObj.word },
-    ...distractors.map(w => ({ value: w.word, emoji: w.image, label: w.word })),
-  ]);
-  return {
-    type: "picture",
-    word: wordObj.word,
-    meaning: wordObj.meaning,
-    hint: wordObj.sentence,
-    correct: wordObj.word,
-    praise: `Yes! "${wordObj.word}" means ${wordObj.meaning}.`,
-    explanation: wordObj.sentence,
-    options,
-  };
-}
-
 function makeDefinitionQuestion(wordObj, allWords) {
   const sentence = wordObj.sentence;
   const wordIdx  = sentence.toLowerCase().indexOf(wordObj.word.toLowerCase());
@@ -131,7 +112,7 @@ export function buildQuestions(lesson = null) {
   const picked = shuffle(words).slice(0, Math.min(5, words.length));
 
   // Assign question types round-robin so each lesson has variety
-  const types = shuffle(["picture", "definition", "listen", "spell", "fill"]);
+  const types = shuffle(["definition", "listen", "spell", "hangman"]);
 
   return picked.map((wordObj, i) => {
     const type = types[i % types.length];
@@ -168,7 +149,6 @@ export function buildHangmanQuestions(lesson = null) {
 /* ─── Single question dispatcher ────────────────────────────────── */
 function makeQuestion(type, wordObj, allWords) {
   switch (type) {
-    case "picture":    return makePictureQuestion(wordObj, allWords);
     case "definition": return makeDefinitionQuestion(wordObj, allWords);
     case "listen":     return makeListenQuestion(wordObj, allWords);
     case "spell":      return makeSpellQuestion(wordObj);
@@ -193,7 +173,7 @@ export function buildTypedQuestions(lesson = null, type = "mix", count = 5) {
   const picked = shuffle(words).slice(0, count);
 
   if (type === "mix") {
-    const mixTypes = shuffle(["definition", "listen", "spell", "fill", "hangman"]);
+    const mixTypes = shuffle(["definition", "listen", "spell", "hangman"]);
     return picked.map((wordObj, i) =>
       makeQuestion(mixTypes[i % mixTypes.length], wordObj, words)
     );

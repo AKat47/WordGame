@@ -34,11 +34,6 @@ function lastNDays(history, n) {
   return (history || []).filter(e => e.date >= cutStr);
 }
 
-function thisMonth(history) {
-  const prefix = new Date().toISOString().slice(0, 7); // "YYYY-MM"
-  return (history || []).filter(e => e.date?.startsWith(prefix));
-}
-
 function mostPlayed(history) {
   if (!history?.length) return null;
   const counts = {};
@@ -76,33 +71,33 @@ function Metric({ label, value, color }) {
   );
 }
 
-/* ── Daily activity strip (last 14 days) ─────────────────────────── */
+/* ── Daily activity strip (last 7 days) ──────────────────────────── */
 function ActivityStrip({ history }) {
   const { theme: t } = useTheme();
-  const days = 14;
+  const days = 7;
   const cells = Array.from({ length: days }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (days - 1 - i));
     const dateStr = d.toISOString().slice(0, 10);
     const played  = (history || []).some(e => e.date === dateStr);
     const isToday = i === days - 1;
-    return { dateStr, played, isToday, label: d.toLocaleDateString("en-IN", { weekday: "short" }).slice(0, 1) };
+    return { dateStr, played, isToday, label: d.toLocaleDateString("en-IN", { weekday: "short" }).slice(0, 3) };
   });
 
   return (
     <div style={{ background: t.card, border: `1.5px solid ${t.line}`, borderRadius: 16, padding: "16px 18px" }}>
       <div style={{ fontSize: 13, fontWeight: 800, color: t.inkSoft, letterSpacing: "1px", marginBottom: 12 }}>
-        📅 LAST 14 DAYS
+        📅 LAST 7 DAYS
       </div>
       <div style={{ display: "flex", gap: 6, justifyContent: "space-between" }}>
         {cells.map(({ dateStr, played, isToday, label }) => (
           <div key={dateStr} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
             <div style={{
-              width: 16, height: 16, borderRadius: 4,
+              width: 32, height: 32, borderRadius: 8,
               background: played ? t.primary : t.line,
               border: isToday ? `2px solid ${t.primaryDeep}` : "none",
             }}/>
-            <div style={{ fontSize: 9, color: t.inkFaint, fontWeight: 700 }}>{label}</div>
+            <div style={{ fontSize: 10, color: t.inkFaint, fontWeight: 700 }}>{label}</div>
           </div>
         ))}
       </div>
@@ -110,10 +105,21 @@ function ActivityStrip({ history }) {
   );
 }
 
-/* ── Game breakdown table ────────────────────────────────────────── */
-function GameBreakdown({ gameStats }) {
+/* ── Game breakdown table (computed from filtered history) ───────── */
+function GameBreakdown({ history }) {
   const { theme: t } = useTheme();
-  const rows = Object.entries(gameStats || {})
+
+  // Build per-type stats from history entries
+  const statsMap = {};
+  for (const e of (history || [])) {
+    if (!e.type) continue;
+    if (!statsMap[e.type]) statsMap[e.type] = { played: 0, totalCorrect: 0, totalQuestions: 0 };
+    statsMap[e.type].played        += 1;
+    statsMap[e.type].totalCorrect  += e.correct ?? 0;
+    statsMap[e.type].totalQuestions+= e.total   ?? 0;
+  }
+
+  const rows = Object.entries(statsMap)
     .filter(([, s]) => s.played > 0)
     .sort((a, b) => b[1].played - a[1].played);
 
@@ -135,9 +141,7 @@ function GameBreakdown({ gameStats }) {
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: t.ink }}>{info.label}</div>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
-                  <div style={{
-                    height: 5, borderRadius: 3, flex: 1, background: t.line, overflow: "hidden",
-                  }}>
+                  <div style={{ height: 5, borderRadius: 3, flex: 1, background: t.line, overflow: "hidden" }}>
                     <div style={{ width: `${pct}%`, height: "100%", background: t.primary, borderRadius: 3 }}/>
                   </div>
                   <div style={{ fontSize: 11, color: t.inkFaint, whiteSpace: "nowrap" }}>{pct}%</div>
@@ -157,7 +161,6 @@ function GameBreakdown({ gameStats }) {
 /* ── Main screen ─────────────────────────────────────────────────── */
 export default function StatsScreen({ progress, onBack, onReset }) {
   const { theme: t } = useTheme();
-  const [tab, setTab]           = useState("week");
   const [confirming, setConfirming] = useState(false);
 
   const handleReset = () => {
@@ -166,14 +169,11 @@ export default function StatsScreen({ progress, onBack, onReset }) {
     setConfirming(false);
   };
 
-  const history  = progress.history || [];
-  const weekData = aggregate(lastNDays(history, 7));
-  const monthData = aggregate(thisMonth(history));
-  const topGame  = mostPlayed(history);
-  const topInfo  = topGame ? (GAME_LABELS[topGame] ?? { label: topGame, emoji: "🎯" }) : null;
-
-  const displayed = tab === "week" ? weekData : monthData;
-  const tabLabel  = tab === "week" ? "This Week" : "This Month";
+  const history     = progress.history || [];
+  const week7       = lastNDays(history, 7);
+  const weekData    = aggregate(week7);
+  const topGame     = mostPlayed(week7);
+  const topInfo     = topGame ? (GAME_LABELS[topGame] ?? { label: topGame, emoji: "🎯" }) : null;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", background: t.bg, fontFamily: FONT_SANS }}>
@@ -229,7 +229,7 @@ export default function StatsScreen({ progress, onBack, onReset }) {
           <Metric label="GEMS"       value={`💎${progress.gems}`}     color={t.primaryDeep} />
         </div>
 
-        {/* Favourite game */}
+        {/* Favourite game (last 7 days) */}
         {topInfo && (
           <div style={{
             background: t.card, border: `1.5px solid ${t.line}`,
@@ -238,40 +238,22 @@ export default function StatsScreen({ progress, onBack, onReset }) {
           }}>
             <div style={{ fontSize: 28 }}>{topInfo.emoji}</div>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 800, color: t.inkSoft, letterSpacing: "1px" }}>FAVOURITE GAME</div>
+              <div style={{ fontSize: 11, fontWeight: 800, color: t.inkSoft, letterSpacing: "1px" }}>FAVOURITE GAME · LAST 7 DAYS</div>
               <div style={{ fontSize: 15, fontWeight: 800, color: t.ink, fontFamily: FONT_SERIF }}>{topInfo.label}</div>
             </div>
           </div>
         )}
 
-        {/* Week / Month toggle */}
-        <div style={{ display: "flex", background: t.card, borderRadius: 12, padding: 4, border: `1.5px solid ${t.line}` }}>
-          {["week", "month"].map(key => (
-            <div
-              key={key}
-              onClick={() => setTab(key)}
-              style={{
-                flex: 1, textAlign: "center", padding: "8px 0",
-                borderRadius: 9, cursor: "pointer",
-                background: tab === key ? t.primary : "transparent",
-                color: tab === key ? "#fff" : t.inkSoft,
-                fontWeight: 800, fontSize: 13, transition: "background 150ms",
-              }}
-            >
-              {key === "week" ? "This Week" : "This Month"}
-            </div>
-          ))}
-        </div>
+        {/* Last 7 days stat card */}
+        <StatCard title="LAST 7 DAYS" emoji="📊" stats={weekData} />
 
-        <StatCard title={tabLabel.toUpperCase()} emoji="📊" stats={displayed} />
-
-        {/* Activity grid */}
+        {/* Activity grid — last 7 days */}
         <ActivityStrip history={history} />
 
-        {/* Per-game breakdown */}
-        <GameBreakdown gameStats={progress.gameStats} />
+        {/* Per-game breakdown — last 7 days */}
+        <GameBreakdown history={week7} />
 
-        {!history.length && (
+        {!week7.length && (
           <div style={{
             textAlign: "center", padding: "40px 20px",
             color: t.inkFaint, fontStyle: "italic", fontFamily: FONT_SERIF, fontSize: 15,

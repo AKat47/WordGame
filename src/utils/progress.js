@@ -11,7 +11,7 @@
 
 const STORAGE_KEY  = "wordgarden_progress";
 const USER_ID_KEY  = "wordgarden_userId";
-const API_BASE     = "/api";               // proxied to localhost:3001 by Vite
+const API_BASE     = import.meta.env.VITE_API_URL ?? "/api";
 
 /* ── Default shapes ─────────────────────────────────────────────── */
 const DEFAULT_GAME_STAT = {

@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTheme } from "../context/ThemeContext";
 import { FONT_SERIF, FONT_SANS } from "../data/themes";
-import { VOCAB_BOOKS } from "../data/vocab";
 import { buildTypedQuestions } from "../data/questions";
 import { loadProgress, saveProgress, syncFromServer, recordGameResult, getGameStat } from "../utils/progress";
 import { loadUserWords, syncWordsFromServer } from "../utils/userWords";
@@ -9,19 +8,16 @@ import LessonRunner     from "./LessonRunner";
 import CompletionScreen from "./CompletionScreen";
 import Icon from "../components/Icon";
 
-const BUILTIN_LESSON = VOCAB_BOOKS[0].lessons[0];
 const ROUNDS = 5;
 const MIN_USER_WORDS = 4; // need ≥4 words for distractors
 
 /* ── Game type cards ─────────────────────────────────────────────── */
 const GAME_CARDS = [
-  { type: "picture",    emoji: "🖼️",  label: "Picture Match",  desc: "Tap the image that matches the word" },
   { type: "definition", emoji: "📖",  label: "Word Meaning",   desc: "Pick the correct definition" },
   { type: "listen",     emoji: "🔊",  label: "Listen & Tap",   desc: "Hear the word, choose the spelling" },
   { type: "spell",      emoji: "✏️",  label: "Spell It Out",   desc: "Build the word from the letter bank" },
-  { type: "fill",       emoji: "✨",  label: "Fill the Blank", desc: "Read a sentence — you complete it" },
   { type: "hangman",    emoji: "🪢",  label: "Hangman",        desc: "Guess the word one letter at a time" },
-  { type: "mix",        emoji: "🎲",  label: "Full Lesson",    desc: "All game types mixed together" },
+  { type: "mix",        emoji: "🎲",  label: "Full Mix",       desc: "All game types mixed together" },
 ];
 
 /* ── Tiny star-row showing best accuracy ─────────────────────────── */
@@ -137,13 +133,9 @@ export default function LessonScreen({ onGoAddWords, onGoStats, onProgressChange
   const [progress,   setProgress]   = useState(() => loadProgress());
   const [synced,     setSynced]     = useState(false);
   const [userWords,  setUserWords]  = useState(() => loadUserWords());
-  const [useMyWords, setUseMyWords] = useState(false);
 
-  /* ── Active lesson — built-in or user's own words ───────────────── */
-  const myWordsLesson = { title: "My Words", words: userWords };
-  const activeLesson  = (useMyWords && userWords.length >= MIN_USER_WORDS)
-    ? myWordsLesson
-    : BUILTIN_LESSON;
+  /* ── Always play from user's own word bank ──────────────────────── */
+  const activeLesson = { title: "Word Bank", words: userWords };
 
   /* ── Sync progress + user words from MongoDB on mount ───────────── */
   useEffect(() => {
@@ -157,8 +149,6 @@ export default function LessonScreen({ onGoAddWords, onGoStats, onProgressChange
       })
       .catch(() => setSynced(true));
 
-    // Only pull server words if server has MORE than local (cross-device add).
-    // Never restore deleted words by overwriting a smaller local list.
     const localWords = loadUserWords();
     syncWordsFromServer()
       .then(serverWords => {
@@ -169,7 +159,7 @@ export default function LessonScreen({ onGoAddWords, onGoStats, onProgressChange
       .catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const roundCount  = Math.min(ROUNDS, activeLesson.words.length);
+  const roundCount   = Math.min(ROUNDS, activeLesson.words.length);
   const getQuestions = (type) => buildTypedQuestions(activeLesson, type, roundCount);
 
   const handleComplete = (stats) => {
@@ -200,6 +190,8 @@ export default function LessonScreen({ onGoAddWords, onGoStats, onProgressChange
       />
     );
   }
+
+  const hasEnoughWords = userWords.length >= MIN_USER_WORDS;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", background: t.bg, fontFamily: FONT_SANS }}>
@@ -238,53 +230,34 @@ export default function LessonScreen({ onGoAddWords, onGoStats, onProgressChange
             display: "flex", alignItems: "center", gap: 6,
           }}>
             <Icon name="book" size={16} color="#fff"/>
-            My Words
+            WordBank
           </div>
         </div>
       </div>
 
-      {/* My Words lesson toggle — only shown if user has enough words */}
-      <div style={{ margin: "12px 16px 0", display: "flex", flexDirection: "column", gap: 8 }}>
-        {userWords.length >= MIN_USER_WORDS && (
-          <div style={{ display: "flex", background: t.card, borderRadius: 12, padding: 4, border: `1.5px solid ${t.line}` }}>
-            {[{ key: false, label: "📚 Lessons" }, { key: true, label: "🌱 My Words" }].map(({ key, label }) => (
-              <div
-                key={String(key)}
-                onClick={() => setUseMyWords(key)}
-                style={{
-                  flex: 1, textAlign: "center", padding: "8px 0",
-                  borderRadius: 9, cursor: "pointer",
-                  background: useMyWords === key ? t.primary : "transparent",
-                  color: useMyWords === key ? "#fff" : t.inkSoft,
-                  fontWeight: 800, fontSize: 13, transition: "background 150ms",
-                }}
-              >
-                {label}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Teaser if user has some but not enough words yet */}
-        {userWords.length > 0 && userWords.length < MIN_USER_WORDS && (
+      {/* Prompt to add words if bank is too small */}
+      {!hasEnoughWords && (
+        <div style={{ margin: "12px 16px 0" }}>
           <div style={{
-            padding: "8px 14px", borderRadius: 12,
+            padding: "12px 16px", borderRadius: 12,
             background: t.card, border: `1.5px dashed ${t.line}`,
-            fontSize: 12, color: t.inkFaint,
+            fontSize: 13, color: t.inkFaint, textAlign: "center", lineHeight: 1.5,
           }}>
-            🌱 Add {MIN_USER_WORDS - userWords.length} more word{MIN_USER_WORDS - userWords.length !== 1 ? "s" : ""} to unlock My Words games
+            🌱 Add at least {MIN_USER_WORDS} words to your WordBank to start playing
+            {userWords.length > 0 && ` (${MIN_USER_WORDS - userWords.length} more needed)`}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Game cards */}
+      {/* Game cards — only clickable when enough words */}
       <div style={{ flex: 1, overflow: "auto", padding: "12px 16px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
         {GAME_CARDS.map(card => (
           <GameCard
             key={card.type}
             card={card}
             stat={getGameStat(progress, card.type)}
-            onPlay={setPlaying}
+            onPlay={hasEnoughWords ? setPlaying : () => {}}
+            disabled={!hasEnoughWords}
           />
         ))}
       </div>
