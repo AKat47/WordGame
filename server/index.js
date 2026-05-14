@@ -77,6 +77,6 @@ app.put("/api/words/:userId", async (req, res) => {
 });
 
 /* ── Start ───────────────────────────────────────────────────────── */
-app.listen(PORT, () =>
-  console.log(`🌱  Word Garden API  →  http://localhost:${PORT}`)
+app.listen(PORT, "0.0.0.0", () =>
+  console.log(`🌱  Word Garden API  →  http://0.0.0.0:${PORT}`)
 );
