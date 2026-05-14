@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "start":   "node server/index.js",
     "dev":     "vite",
     "server":  "node server/index.js",
     "dev:all": "node server/index.js & vite",
