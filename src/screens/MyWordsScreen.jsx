@@ -3,7 +3,7 @@ import { useTheme } from "../context/ThemeContext";
 import { FONT_SERIF, FONT_SANS } from "../data/themes";
 import Icon from "../components/Icon";
 import BigButton from "../components/BigButton";
-import { fetchDefinition } from "../utils/ai";
+import { fetchAllDefinitions } from "../utils/ai";
 import {
   loadUserWords,
   saveUserWords,
@@ -77,26 +77,85 @@ function Field({ label, value, onChange, placeholder, multiline, rightLabel, onR
   );
 }
 
+/* ─── Meanings picker ────────────────────────────────────────────── */
+function MeaningsPicker({ groups, onPick, onClose, theme: t }) {
+  const POS_LABEL = { noun:"noun", verb:"verb", adjective:"adj.", adverb:"adv.", other:"other" };
+  return (
+    <div style={{
+      marginTop: 8, border: `1.5px solid ${t.primary}`,
+      borderRadius: 12, overflow: "hidden", background: t.bg,
+    }}>
+      <div style={{
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+        padding: "8px 12px", background: t.primarySoft,
+        fontSize: 11, fontWeight: 800, color: t.primaryDeep, letterSpacing: "1px",
+      }}>
+        TAP A MEANING TO USE IT
+        <span onClick={onClose} style={{ cursor: "pointer", fontSize: 16, color: t.inkFaint }}>×</span>
+      </div>
+      <div style={{ maxHeight: 260, overflow: "auto" }}>
+        {groups.map(({ partOfSpeech, definitions }) => (
+          <div key={partOfSpeech}>
+            <div style={{
+              padding: "6px 12px 2px",
+              fontSize: 10, fontWeight: 800, color: t.inkFaint,
+              letterSpacing: "1.5px", textTransform: "uppercase",
+              background: t.card,
+            }}>
+              {POS_LABEL[partOfSpeech] ?? partOfSpeech}
+            </div>
+            {definitions.map((def, i) => (
+              <div
+                key={i}
+                onClick={() => onPick(def)}
+                style={{
+                  padding: "10px 14px",
+                  borderTop: `1px solid ${t.line}`,
+                  fontSize: 14, color: t.ink, lineHeight: 1.45,
+                  cursor: "pointer",
+                  transition: "background 120ms",
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = t.primarySoft}
+                onMouseLeave={e => e.currentTarget.style.background = ""}
+              >
+                {def}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ─── Add Word bottom sheet ──────────────────────────────────────── */
 function AddWordSheet({ onAdd, onCancel }) {
   const { theme: t } = useTheme();
-  const [word, setWord]       = useState("");
-  const [meaning, setMeaning] = useState("");
-  const [example, setExample] = useState("");
-  const [emoji, setEmoji]     = useState("");
-  const [filling, setFilling] = useState(false);
+  const [word, setWord]           = useState("");
+  const [meaning, setMeaning]     = useState("");
+  const [example, setExample]     = useState("");
+  const [emoji, setEmoji]         = useState("");
+  const [filling, setFilling]     = useState(false);
   const [fillError, setFillError] = useState("");
+  const [groups, setGroups]       = useState(null); // meanings picker
 
   const handleAiFill = async () => {
     const trimmed = word.trim();
     if (!trimmed) { setFillError("Type a word first!"); return; }
     setFilling(true);
     setFillError("");
+    setGroups(null);
     try {
-      const def = await fetchMeaning(trimmed);
-      setMeaning(def);
+      const allGroups = await fetchAllDefinitions(trimmed);
+      const total = allGroups.reduce((s, g) => s + g.definitions.length, 0);
+      if (total === 1) {
+        // Only one meaning — fill directly, no picker needed
+        setMeaning(allGroups[0].definitions[0]);
+      } else {
+        setGroups(allGroups);
+      }
     } catch {
-      setFillError("Couldn't reach AI — check your connection.");
+      setFillError("Couldn't fetch definitions — check your connection.");
     } finally {
       setFilling(false);
     }
@@ -151,6 +210,15 @@ function AddWordSheet({ onAdd, onCancel }) {
 
           {fillError && (
             <div style={{ fontSize: 12, color: t.red, marginTop: -8 }}>{fillError}</div>
+          )}
+
+          {groups && (
+            <MeaningsPicker
+              groups={groups}
+              theme={t}
+              onPick={def => { setMeaning(def); setGroups(null); }}
+              onClose={() => setGroups(null)}
+            />
           )}
 
           <Field

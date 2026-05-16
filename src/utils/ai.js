@@ -4,38 +4,54 @@
  * ------------------------------------------------------------------- */
 
 /**
- * Fetch a plain-English definition for a word.
- * Returns the first definition found, cleaned up for a child reader.
+ * Fetch all definitions for a word, grouped by part of speech.
+ * Returns an array of { partOfSpeech, definitions: string[] }.
  *
  * @param {string} word
- * @returns {Promise<string>}
+ * @returns {Promise<Array<{ partOfSpeech: string, definitions: string[] }>>}
  */
-export async function fetchDefinition(word) {
+export async function fetchAllDefinitions(word) {
   const res = await fetch(
     `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word.toLowerCase())}`
   );
 
-  if (res.status === 404) {
-    throw new Error(`No definition found for "${word}".`);
-  }
-  if (!res.ok) {
-    throw new Error(`Dictionary API error ${res.status}`);
-  }
+  if (res.status === 404) throw new Error(`No definition found for "${word}".`);
+  if (!res.ok)           throw new Error(`Dictionary API error ${res.status}`);
 
   const data = await res.json();
+  const clean = s => s.replace(/^(Of|Relating|Pertaining)\b[^.]*[.;]\s*/i, "").trim();
 
-  // Walk meanings → definitions and return the first non-empty one
+  // Collect all definitions grouped by part of speech, deduped
+  const map = new Map();
   for (const entry of data) {
     for (const meaning of entry.meanings ?? []) {
-      const def = meaning.definitions?.[0]?.definition;
-      if (def) {
-        // Strip leading "Of, relating to…" style prefixes and trim
-        return def.replace(/^(Of|Relating|Pertaining)\b[^.]*[.;]\s*/i, "").trim();
+      const pos = meaning.partOfSpeech ?? "other";
+      if (!map.has(pos)) map.set(pos, []);
+      for (const d of meaning.definitions ?? []) {
+        if (d.definition) {
+          const cleaned = clean(d.definition);
+          if (!map.get(pos).includes(cleaned)) map.get(pos).push(cleaned);
+        }
       }
     }
   }
 
-  throw new Error(`Definition not available for "${word}".`);
+  if (!map.size) throw new Error(`Definition not available for "${word}".`);
+
+  return Array.from(map.entries()).map(([partOfSpeech, definitions]) => ({
+    partOfSpeech,
+    definitions: definitions.slice(0, 4), // cap at 4 per part of speech
+  }));
+}
+
+/**
+ * Fetch a single plain-English definition (first result).
+ * @param {string} word
+ * @returns {Promise<string>}
+ */
+export async function fetchDefinition(word) {
+  const groups = await fetchAllDefinitions(word);
+  return groups[0]?.definitions[0] ?? "";
 }
 
 /**
