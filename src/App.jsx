@@ -14,6 +14,38 @@ const GLOBAL_CSS = `
   *::-webkit-scrollbar { width: 0; height: 0; }
   @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
   @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+
+  /* ── Desktop: centred phone shell ── */
+  .wg-wrap {
+    min-height: 100dvh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .wg-shell {
+    width: 100%; max-width: 412px;
+    height: min(892px, calc(100dvh - 40px));
+    border-radius: 28px; overflow: hidden;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.28), 0 4px 16px rgba(0,0,0,0.12);
+    display: flex; flex-direction: column;
+    position: relative;
+  }
+
+  /* ── Mobile: fill the entire screen ── */
+  @media (max-width: 500px) {
+    .wg-wrap {
+      padding: 0;
+      align-items: stretch;
+      min-height: 100svh;
+      min-height: 100dvh;
+    }
+    .wg-shell {
+      max-width: 100%;
+      height: 100svh;
+      height: 100dvh;
+      border-radius: 0;
+      box-shadow: none;
+    }
+  }
 `;
 
 function AppInner() {
@@ -31,20 +63,9 @@ function AppInner() {
   return (
     <>
       <style>{GLOBAL_CSS}</style>
-      <div style={{
-        minHeight: "100vh",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        background: t.bgDeep, padding: "20px",
-      }}>
+      <div className="wg-wrap" style={{ background: t.bgDeep }}>
         {/* Phone shell */}
-        <div style={{
-          width: "100%", maxWidth: 412,
-          height: "min(892px, calc(100dvh - 40px))",
-          borderRadius: 28, overflow: "hidden",
-          boxShadow: "0 24px 64px rgba(0,0,0,0.28), 0 4px 16px rgba(0,0,0,0.12)",
-          display: "flex", flexDirection: "column",
-          background: t.bg, position: "relative",
-        }}>
+        <div className="wg-shell" style={{ background: t.bg }}>
           {screen === "lesson"  && (
             <LessonScreen
               onGoAddWords={() => setScreen("mywords")}
