@@ -243,13 +243,22 @@ export default function MyWordsScreen({ onBack }) {
   const [search, setSearch]     = useState("");
   const [showAdd, setShowAdd]   = useState(false);
 
-  // Sync from MongoDB on mount — only apply if server has MORE words than local
+  // Two-way sync on mount:
+  //   server > local  → pull server words down
+  //   local  > server → push cached words up (e.g. first open after deploy)
   useEffect(() => {
     const localWords = loadUserWords();
     syncWordsFromServer().then(serverWords => {
-      if (!serverWords || serverWords.length <= localWords.length) return;
-      saveUserWords(serverWords);
-      setWords(serverWords);
+      if (!serverWords) return;
+      if (serverWords.length > localWords.length) {
+        // Server is ahead — use server copy
+        saveUserWords(serverWords);
+        setWords(serverWords);
+      } else if (localWords.length > serverWords.length) {
+        // Local has words the server doesn't — push them up
+        saveUserWords(localWords);
+      }
+      // Equal length → already in sync, do nothing
     }).catch(() => {});
   }, []);
 
