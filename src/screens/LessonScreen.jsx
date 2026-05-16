@@ -17,8 +17,43 @@ const GAME_CARDS = [
   { type: "listen",     emoji: "🔊",  label: "Listen & Tap",   desc: "Hear the word, choose the spelling" },
   { type: "spell",      emoji: "✏️",  label: "Spell It Out",   desc: "Build the word from the letter bank" },
   { type: "hangman",    emoji: "🪢",  label: "Hangman",        desc: "Guess the word one letter at a time" },
+  { type: "unscramble", emoji: "🔀",  label: "Unscramble",     desc: "Rearrange scrambled letters into the word" },
+  { type: "flashcard",  emoji: "🃏",  label: "Flashcards",     desc: "Flip cards to test your memory" },
   { type: "mix",        emoji: "🎲",  label: "Full Mix",       desc: "All game types mixed together" },
 ];
+
+/* ── Theme chooser strip ─────────────────────────────────────────── */
+const THEME_ORDER = ["storybook", "forest", "bubblegum", "twilight"];
+
+function ThemeChooser() {
+  const { theme: t, themeKey, setThemeKey, THEMES } = useTheme();
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      {THEME_ORDER.map(key => {
+        const th = THEMES[key];
+        const active = key === themeKey;
+        return (
+          <div
+            key={key}
+            onClick={() => setThemeKey(key)}
+            title={th.name}
+            style={{
+              width: active ? 28 : 22,
+              height: active ? 28 : 22,
+              borderRadius: "50%",
+              background: th.primary,
+              border: active ? `3px solid ${t.ink}` : `3px solid transparent`,
+              boxShadow: active ? `0 2px 6px ${th.primaryDeep}` : "none",
+              cursor: "pointer",
+              transition: "width 150ms, height 150ms, border 150ms",
+              flexShrink: 0,
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
 
 /* ── Tiny star-row showing best accuracy ─────────────────────────── */
 function AccuracyStars({ accuracy }) {
@@ -209,6 +244,10 @@ export default function LessonScreen({ onGoAddWords, onGoStats, onProgressChange
           <div style={{ fontSize: 11, fontWeight: 800, color: t.inkSoft, letterSpacing: "2px" }}>WORD GARDEN</div>
           <div style={{ fontSize: 24, fontWeight: 800, color: t.ink, fontFamily: FONT_SERIF, marginTop: 2 }}>
             Choose a game
+          </div>
+          {/* Theme palette chips */}
+          <div style={{ marginTop: 8 }}>
+            <ThemeChooser/>
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>

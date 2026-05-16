@@ -29,6 +29,16 @@ export const THEMES = {
     sage: "#8CC08A", sageDeep: "#5F9060", sageSoft: "#2E4A30",
     red: "#E88E8E", redSoft: "#4A2A2A", lavender: "#B09EE0", sky: "#8EB4D4",
   },
+  bubblegum: {
+    name: "Bubblegum",
+    bg: "#FFF0F7", bgDeep: "#FFD9EC", card: "#FFFFFF",
+    ink: "#3A1F35", inkSoft: "#7A4F70", inkFaint: "#C9A6BE", line: "#F6CFE2",
+    primary: "#FF5FA2", primaryDeep: "#C03879", primarySoft: "#FFD9EC",
+    gold: "#FFC93A", goldDeep: "#C49414", goldSoft: "#FFF2C7",
+    pink: "#FF94C9", pinkDeep: "#D26AA1", pinkSoft: "#FFDDEE",
+    sage: "#7DD4A8", sageDeep: "#3FA275", sageSoft: "#D2F1E0",
+    red: "#FF6B6B", redSoft: "#FFD5D5", lavender: "#B58CFF", sky: "#5FC8FF",
+  },
 };
 
 export const FONT_SERIF = "'Lora', Georgia, serif";

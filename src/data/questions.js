@@ -17,7 +17,7 @@ function pickRandom(arr, n, exclude = null) {
   return shuffle(arr.filter(x => x !== exclude)).slice(0, n);
 }
 
-/** Build a scrambled letter bank for the spell game */
+/** Build a scrambled letter bank for the spell game (adds 3 decoy letters) */
 function makeLetterBank(word) {
   const correct = word.split("");
   // Add 3 decoy letters that aren't already in the word
@@ -26,6 +26,11 @@ function makeLetterBank(word) {
     .filter(l => !correct.includes(l));
   const extras = pickRandom(decoys, 3).map(l => l);
   return shuffle([...correct, ...extras]);
+}
+
+/** Shuffle just the word's own letters (no extras) — for Unscramble */
+function makeScrambledLetters(word) {
+  return shuffle(word.split(""));
 }
 
 /* ─── Question builders (one per game type) ──────────────────────── */
@@ -97,6 +102,32 @@ function makeFillQuestion(wordObj, allWords) {
   };
 }
 
+function makeUnscrambleQuestion(wordObj) {
+  return {
+    type:         "unscramble",
+    meaning:      wordObj.meaning,
+    correct:      wordObj.word,
+    correctLabel: wordObj.word,
+    praise:       `Brilliant! You unscrambled "${wordObj.word}" — ${wordObj.meaning}.`,
+    explanation:  `"${wordObj.word}" means ${wordObj.meaning}.`,
+    letters:      makeScrambledLetters(wordObj.word),
+  };
+}
+
+function makeFlashcardQuestion(wordObj) {
+  return {
+    type:         "flashcard",
+    word:         wordObj.word,
+    meaning:      wordObj.meaning,
+    sentence:     wordObj.sentence ?? "",
+    emoji:        wordObj.image  || "📖",
+    correct:      wordObj.word,
+    correctLabel: wordObj.word,
+    praise:       `Great memory! "${wordObj.word}" means ${wordObj.meaning}.`,
+    explanation:  `"${wordObj.word}" means ${wordObj.meaning}. ${wordObj.sentence ?? ""}`,
+  };
+}
+
 /* ─── Main export ────────────────────────────────────────────────── */
 
 /**
@@ -146,6 +177,8 @@ export function buildHangmanQuestions(lesson = null) {
   return shuffle(targetLesson.words).map(makeHangmanQuestion);
 }
 
+export { makeUnscrambleQuestion, makeFlashcardQuestion };
+
 /* ─── Single question dispatcher ────────────────────────────────── */
 function makeQuestion(type, wordObj, allWords) {
   switch (type) {
@@ -154,6 +187,8 @@ function makeQuestion(type, wordObj, allWords) {
     case "spell":      return makeSpellQuestion(wordObj);
     case "fill":       return makeFillQuestion(wordObj, allWords);
     case "hangman":    return makeHangmanQuestion(wordObj);
+    case "unscramble": return makeUnscrambleQuestion(wordObj);
+    case "flashcard":  return makeFlashcardQuestion(wordObj);
     default:           return makeDefinitionQuestion(wordObj, allWords);
   }
 }
@@ -173,7 +208,7 @@ export function buildTypedQuestions(lesson = null, type = "mix", count = 5) {
   const picked = shuffle(words).slice(0, count);
 
   if (type === "mix") {
-    const mixTypes = shuffle(["definition", "listen", "spell", "hangman"]);
+    const mixTypes = shuffle(["definition", "listen", "spell", "hangman", "unscramble", "flashcard"]);
     return picked.map((wordObj, i) =>
       makeQuestion(mixTypes[i % mixTypes.length], wordObj, words)
     );
@@ -181,6 +216,14 @@ export function buildTypedQuestions(lesson = null, type = "mix", count = 5) {
 
   if (type === "hangman") {
     return picked.map(wordObj => makeHangmanQuestion(wordObj));
+  }
+
+  if (type === "unscramble") {
+    return picked.map(wordObj => makeUnscrambleQuestion(wordObj));
+  }
+
+  if (type === "flashcard") {
+    return picked.map(wordObj => makeFlashcardQuestion(wordObj));
   }
 
   return picked.map(wordObj => makeQuestion(type, wordObj, words));

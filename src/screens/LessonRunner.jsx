@@ -9,12 +9,16 @@ import MatchDefinitionGame from "../games/MatchDefinitionGame";
 import ListenTapGame       from "../games/ListenTapGame";
 import SpellGame           from "../games/SpellGame";
 import HangmanGame         from "../games/HangmanGame";
+import UnscrambleGame      from "../games/UnscrambleGame";
+import FlashCardGame       from "../games/FlashCardGame";
 
 const GAME_MAP = {
   definition: MatchDefinitionGame,
   listen:     ListenTapGame,
   spell:      SpellGame,
   hangman:    HangmanGame,
+  unscramble: UnscrambleGame,
+  flashcard:  FlashCardGame,
 };
 
 /* ── Web Audio sound effects (no audio files needed) ─────────────── */
