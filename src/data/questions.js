@@ -179,17 +179,144 @@ export function buildHangmanQuestions(lesson = null) {
 
 export { makeUnscrambleQuestion, makeFlashcardQuestion };
 
+/* ─── New game question builders ────────────────────────────────── */
+
+/** WordChallenge: show word, pick meaning, timed */
+function makeWordChallengeQuestion(wordObj, allWords) {
+  const distractors = pickRandom(allWords, 3, wordObj).map(w => w.meaning);
+  return {
+    type:         "wordchallenge",
+    word:         wordObj.word,
+    correct:      wordObj.meaning,
+    correctLabel: wordObj.meaning,
+    options:      shuffle([wordObj.meaning, ...distractors]),
+    praise:       `Fast work! "${wordObj.word}" means ${wordObj.meaning}.`,
+    explanation:  `"${wordObj.word}" means ${wordObj.meaning}.`,
+  };
+}
+
+/** WordMaster: show sentence with blank, pick the word (harder — no meaning hint) */
+function makeWordMasterQuestion(wordObj, allWords) {
+  const sentence = wordObj.sentence ?? "";
+  const wordIdx  = sentence.toLowerCase().indexOf(wordObj.word.toLowerCase());
+  const before   = wordIdx >= 0 ? sentence.slice(0, wordIdx) : "";
+  const after    = wordIdx >= 0 ? sentence.slice(wordIdx + wordObj.word.length) : sentence;
+  const distractors = pickRandom(allWords, 3, wordObj).map(w => w.word);
+  return {
+    type:          "wordmaster",
+    sentenceParts: { before, after },
+    correct:       wordObj.word,
+    correctLabel:  wordObj.word,
+    options:       shuffle([wordObj.word, ...distractors]),
+    praise:        `Masterful! "${wordObj.word}" fits perfectly.`,
+    explanation:   `"${wordObj.word}" means ${wordObj.meaning}.`,
+  };
+}
+
+/** WordPuzzle: clue shown, type the answer on a keyboard */
+function makeWordPuzzleQuestion(wordObj) {
+  return {
+    type:         "wordpuzzle",
+    meaning:      wordObj.meaning,
+    correct:      wordObj.word,
+    correctLabel: wordObj.word,
+    praise:       `Solved! "${wordObj.word}" — ${wordObj.meaning}.`,
+    explanation:  `"${wordObj.word}" means ${wordObj.meaning}.`,
+  };
+}
+
+/** LetterDrop: same shape as Unscramble — letters animate in */
+function makeLetterDropQuestion(wordObj) {
+  return {
+    type:         "letterdrop",
+    meaning:      wordObj.meaning,
+    correct:      wordObj.word,
+    correctLabel: wordObj.word,
+    praise:       `Caught them all! "${wordObj.word}" — ${wordObj.meaning}.`,
+    explanation:  `"${wordObj.word}" means ${wordObj.meaning}.`,
+    letters:      makeScrambledLetters(wordObj.word),
+  };
+}
+
+/* ─── Multi-pair question helpers (QuickMatch / WordPairs / MemoryMatch) ── */
+function makeMultiPairQuestion(type, wordObjs) {
+  return {
+    type,
+    pairs:        wordObjs.map(w => ({ word: w.word, meaning: w.meaning })),
+    autoAdvance:  true,
+    correct:      "done",
+    correctLabel: "",
+    praise:       "All matched! Great work!",
+    explanation:  "",
+  };
+}
+
+/* ─── Word Hunt grid generator ──────────────────────────────────── */
+function generateHuntGrid(targetWords, rows = 8, cols = 8) {
+  const grid = Array.from({ length: rows }, () => Array(cols).fill(""));
+  const ALPHA = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+  for (const word of targetWords) {
+    const w = word.toUpperCase();
+    let placed = false;
+    for (let attempt = 0; attempt < 120 && !placed; attempt++) {
+      const horiz = Math.random() > 0.5;
+      const r = Math.floor(Math.random() * (horiz ? rows : Math.max(1, rows - w.length + 1)));
+      const c = Math.floor(Math.random() * (horiz ? Math.max(1, cols - w.length + 1) : cols));
+      let fits = true;
+      for (let i = 0; i < w.length; i++) {
+        const gr = horiz ? r : r + i;
+        const gc = horiz ? c + i : c;
+        if (gr >= rows || gc >= cols) { fits = false; break; }
+        if (grid[gr][gc] !== "" && grid[gr][gc] !== w[i]) { fits = false; break; }
+      }
+      if (fits) {
+        for (let i = 0; i < w.length; i++) {
+          grid[horiz ? r : r + i][horiz ? c + i : c] = w[i];
+        }
+        placed = true;
+      }
+    }
+  }
+
+  // Fill empty cells with random letters
+  for (let r = 0; r < rows; r++)
+    for (let c = 0; c < cols; c++)
+      if (!grid[r][c]) grid[r][c] = ALPHA[Math.floor(Math.random() * 26)];
+
+  return grid;
+}
+
+function makeWordHuntQuestion(wordObjs) {
+  const targetWords = wordObjs.map(w => w.word.toUpperCase());
+  const grid = generateHuntGrid(targetWords);
+  return {
+    type:         "wordhunt",
+    grid,
+    targetWords,
+    autoAdvance:  true,
+    correct:      "done",
+    correctLabel: "",
+    praise:       "All words found!",
+    explanation:  "",
+  };
+}
+
 /* ─── Single question dispatcher ────────────────────────────────── */
 function makeQuestion(type, wordObj, allWords) {
   switch (type) {
-    case "definition": return makeDefinitionQuestion(wordObj, allWords);
-    case "listen":     return makeListenQuestion(wordObj, allWords);
-    case "spell":      return makeSpellQuestion(wordObj);
-    case "fill":       return makeFillQuestion(wordObj, allWords);
-    case "hangman":    return makeHangmanQuestion(wordObj);
-    case "unscramble": return makeUnscrambleQuestion(wordObj);
-    case "flashcard":  return makeFlashcardQuestion(wordObj);
-    default:           return makeDefinitionQuestion(wordObj, allWords);
+    case "definition":    return makeDefinitionQuestion(wordObj, allWords);
+    case "listen":        return makeListenQuestion(wordObj, allWords);
+    case "spell":         return makeSpellQuestion(wordObj);
+    case "fill":          return makeFillQuestion(wordObj, allWords);
+    case "hangman":       return makeHangmanQuestion(wordObj);
+    case "unscramble":    return makeUnscrambleQuestion(wordObj);
+    case "flashcard":     return makeFlashcardQuestion(wordObj);
+    case "wordchallenge": return makeWordChallengeQuestion(wordObj, allWords);
+    case "wordmaster":    return makeWordMasterQuestion(wordObj, allWords);
+    case "wordpuzzle":    return makeWordPuzzleQuestion(wordObj);
+    case "letterdrop":    return makeLetterDropQuestion(wordObj);
+    default:              return makeDefinitionQuestion(wordObj, allWords);
   }
 }
 
@@ -218,12 +345,28 @@ export function buildTypedQuestions(lesson = null, type = "mix", count = 5) {
     return picked.map(wordObj => makeHangmanQuestion(wordObj));
   }
 
-  if (type === "unscramble") {
-    return picked.map(wordObj => makeUnscrambleQuestion(wordObj));
+  if (type === "unscramble")    return picked.map(w => makeUnscrambleQuestion(w));
+  if (type === "flashcard")     return picked.map(w => makeFlashcardQuestion(w));
+  if (type === "wordchallenge") return picked.map(w => makeWordChallengeQuestion(w, words));
+  if (type === "wordmaster")    return picked.map(w => makeWordMasterQuestion(w, words));
+  if (type === "wordpuzzle")    return picked.map(w => makeWordPuzzleQuestion(w));
+  if (type === "letterdrop")    return picked.map(w => makeLetterDropQuestion(w));
+
+  // Multi-pair games: 5 rounds × 4 pairs each
+  if (type === "quickmatch" || type === "wordpairs" || type === "memorymatch") {
+    const PAIRS = 4;
+    const pool  = shuffle(words);
+    return Array.from({ length: count }, (_, i) => {
+      const slice = pool.slice(i * PAIRS, (i + 1) * PAIRS);
+      const chunk = slice.length >= 2 ? slice : pool.slice(0, Math.min(PAIRS, pool.length));
+      return makeMultiPairQuestion(type, chunk);
+    });
   }
 
-  if (type === "flashcard") {
-    return picked.map(wordObj => makeFlashcardQuestion(wordObj));
+  // Word Hunt: single round with several words hidden in a grid
+  if (type === "wordhunt") {
+    const huntWords = shuffle(words).slice(0, Math.min(5, words.length));
+    return [makeWordHuntQuestion(huntWords)];
   }
 
   return picked.map(wordObj => makeQuestion(type, wordObj, words));

@@ -9,21 +9,6 @@ import {
   saveUserWords,
   syncWordsFromServer,
 } from "../utils/userWords";
-import { VOCAB_BOOKS } from "../data/vocab";
-
-/* ─── Flatten all built-in vocab into a single word list ─────────── */
-function getVocabSeed() {
-  const seen = new Set();
-  const out  = [];
-  for (const book of VOCAB_BOOKS) {
-    for (const lesson of book.lessons) {
-      for (const w of lesson.words) {
-        if (!seen.has(w.word)) { seen.add(w.word); out.push(w); }
-      }
-    }
-  }
-  return out;
-}
 
 /* ─── Only show user-added words here ───────────────────────────── */
 function getAllWords() {
@@ -326,30 +311,10 @@ export default function MyWordsScreen({ onBack }) {
   const [search, setSearch]     = useState("");
   const [showAdd, setShowAdd]   = useState(false);
 
-  // Three-way sync on mount:
-  //   new user (both empty) → seed from built-in vocab + push to server
-  //   server > local        → pull server words down
-  //   local  > server       → push cached words up
+  // Refresh local state from localStorage when screen mounts
+  // (App.jsx handles the actual server sync on startup)
   useEffect(() => {
-    const localWords = loadUserWords();
-    syncWordsFromServer().then(serverWords => {
-      const server = serverWords ?? [];
-
-      if (server.length === 0 && localWords.length === 0) {
-        // Brand-new user — seed with all built-in vocab
-        const seed = getVocabSeed();
-        saveUserWords(seed);   // saves locally + pushes to MongoDB
-        setWords(seed);
-      } else if (server.length > localWords.length) {
-        // Server is ahead — pull down
-        saveUserWords(server);
-        setWords(server);
-      } else if (localWords.length > server.length) {
-        // Local is ahead — push up
-        saveUserWords(localWords);
-      }
-      // Equal → already in sync
-    }).catch(() => {});
+    setWords(loadUserWords());
   }, []);
 
   const filtered = words.filter(w =>

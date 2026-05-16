@@ -11,7 +11,7 @@ import Icon from "../components/Icon";
 const ROUNDS = 5;
 const MIN_USER_WORDS = 4; // need ≥4 words for distractors
 
-/* ── Game type cards ─────────────────────────────────────────────── */
+/* ── Primary game cards (vertical list) ─────────────────────────── */
 const GAME_CARDS = [
   { type: "definition", emoji: "📖",  label: "Word Meaning",   desc: "Pick the correct definition" },
   { type: "listen",     emoji: "🔊",  label: "Listen & Tap",   desc: "Hear the word, choose the spelling" },
@@ -20,6 +20,18 @@ const GAME_CARDS = [
   { type: "unscramble", emoji: "🔀",  label: "Unscramble",     desc: "Rearrange scrambled letters into the word" },
   { type: "flashcard",  emoji: "🃏",  label: "Flashcards",     desc: "Flip cards to test your memory" },
   { type: "mix",        emoji: "🎲",  label: "Full Mix",       desc: "All game types mixed together" },
+];
+
+/* ── Explore grid (2×4) ──────────────────────────────────────────── */
+const EXPLORE_CARDS = [
+  { type: "quickmatch",    emoji: "💡", label: "Quick Match",    desc: "Match words with their meanings" },
+  { type: "wordhunt",      emoji: "🎯", label: "Word Hunt",      desc: "Find hidden words in a grid" },
+  { type: "wordchallenge", emoji: "🏅", label: "Word Challenge", desc: "Answer in time, score high!" },
+  { type: "wordpuzzle",    emoji: "🧩", label: "Word Puzzle",    desc: "Solve the puzzle using clues" },
+  { type: "letterdrop",    emoji: "🔤", label: "Letter Drop",    desc: "Drop letters to make words" },
+  { type: "wordmaster",    emoji: "👑", label: "Word Master",    desc: "Fill the blank — no meaning hint" },
+  { type: "wordpairs",     emoji: "📚", label: "Word Pairs",     desc: "Match word pairs in a card grid" },
+  { type: "memorymatch",   emoji: "🧠", label: "Memory Match",   desc: "Flip cards, sharpen memory" },
 ];
 
 /* ── Theme chooser strip ─────────────────────────────────────────── */
@@ -119,6 +131,46 @@ function GameCard({ card, stat, onPlay }) {
       </div>
 
       <Icon name="chevronRight" size={22} color={t.inkFaint}/>
+    </div>
+  );
+}
+
+/* ── Explore grid card (smaller) ────────────────────────────────── */
+function ExploreCard({ card, onPlay, disabled }) {
+  const { theme: t } = useTheme();
+  const [pressed, setPressed] = useState(false);
+  return (
+    <div
+      onPointerDown={() => setPressed(true)}
+      onPointerUp={() => setPressed(false)}
+      onPointerLeave={() => setPressed(false)}
+      onClick={() => !disabled && onPlay(card.type)}
+      style={{
+        background: t.card,
+        border: `1.5px solid ${t.line}`,
+        borderRadius: 16,
+        boxShadow: pressed || disabled ? "none" : `0 3px 0 ${t.line}`,
+        transform: pressed && !disabled ? "translateY(3px)" : "none",
+        transition: "transform 80ms, box-shadow 80ms",
+        padding: "14px 10px",
+        display: "flex", flexDirection: "column",
+        alignItems: "center", gap: 6,
+        cursor: disabled ? "default" : "pointer",
+        opacity: disabled ? 0.5 : 1,
+        textAlign: "center",
+      }}
+    >
+      <div style={{ fontSize: 28 }}>{card.emoji}</div>
+      <div style={{ fontSize: 13, fontWeight: 800, color: t.ink, lineHeight: 1.2 }}>{card.label}</div>
+      <div style={{ fontSize: 10, color: t.inkFaint, lineHeight: 1.3 }}>{card.desc}</div>
+      <div style={{
+        background: t.primarySoft, color: t.primary,
+        fontSize: 10, fontWeight: 800,
+        padding: "3px 8px", borderRadius: 20, letterSpacing: "0.5px",
+        marginTop: 2,
+      }}>
+        5 rds
+      </div>
     </div>
   );
 }
@@ -288,7 +340,7 @@ export default function LessonScreen({ onGoAddWords, onGoStats, onProgressChange
         </div>
       )}
 
-      {/* Game cards — only clickable when enough words */}
+      {/* Primary game cards + explore grid */}
       <div style={{ flex: 1, overflow: "auto", padding: "12px 16px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
         {GAME_CARDS.map(card => (
           <GameCard
@@ -299,6 +351,23 @@ export default function LessonScreen({ onGoAddWords, onGoStats, onProgressChange
             disabled={!hasEnoughWords}
           />
         ))}
+
+        {/* More Games to Explore */}
+        <div style={{ marginTop: 14 }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: t.inkFaint, letterSpacing: "1.5px", textAlign: "center", marginBottom: 10 }}>
+            MORE GAMES TO EXPLORE
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8 }}>
+            {EXPLORE_CARDS.map(card => (
+              <ExploreCard
+                key={card.type}
+                card={card}
+                onPlay={hasEnoughWords ? setPlaying : () => {}}
+                disabled={!hasEnoughWords}
+              />
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

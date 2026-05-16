@@ -11,14 +11,30 @@ import SpellGame           from "../games/SpellGame";
 import HangmanGame         from "../games/HangmanGame";
 import UnscrambleGame      from "../games/UnscrambleGame";
 import FlashCardGame       from "../games/FlashCardGame";
+import WordChallengeGame   from "../games/WordChallengeGame";
+import WordMasterGame      from "../games/WordMasterGame";
+import WordPuzzleGame      from "../games/WordPuzzleGame";
+import LetterDropGame      from "../games/LetterDropGame";
+import QuickMatchGame      from "../games/QuickMatchGame";
+import WordPairsGame       from "../games/WordPairsGame";
+import MemoryMatchGame     from "../games/MemoryMatchGame";
+import WordHuntGame        from "../games/WordHuntGame";
 
 const GAME_MAP = {
-  definition: MatchDefinitionGame,
-  listen:     ListenTapGame,
-  spell:      SpellGame,
-  hangman:    HangmanGame,
-  unscramble: UnscrambleGame,
-  flashcard:  FlashCardGame,
+  definition:    MatchDefinitionGame,
+  listen:        ListenTapGame,
+  spell:         SpellGame,
+  hangman:       HangmanGame,
+  unscramble:    UnscrambleGame,
+  flashcard:     FlashCardGame,
+  wordchallenge: WordChallengeGame,
+  wordmaster:    WordMasterGame,
+  wordpuzzle:    WordPuzzleGame,
+  letterdrop:    LetterDropGame,
+  quickmatch:    QuickMatchGame,
+  wordpairs:     WordPairsGame,
+  memorymatch:   MemoryMatchGame,
+  wordhunt:      WordHuntGame,
 };
 
 /* ── Web Audio sound effects (no audio files needed) ─────────────── */
@@ -101,19 +117,26 @@ export default function LessonRunner({ questions: propQuestions, onExit, onCompl
   const q        = questions[idx];
   const progress = idx / questions.length;
 
+  const next = () => { setAnswered(false); setFeedback(null); setIdx(i => i + 1); };
+
   const handleAnswer = (correct) => {
     playSound(correct);
     setAnswered(true);
     if (correct) setCorrect(c => c + 1);
     else         setHearts(h => Math.max(0, h - 1));
+
+    // Multi-word games complete themselves — skip feedback drawer, auto-advance
+    if (q.autoAdvance) {
+      setTimeout(() => { setAnswered(false); setFeedback(null); setIdx(i => i + 1); }, 500);
+      return;
+    }
+
     setFeedback({
       correct,
       correctAnswer: q.correctLabel || q.correct,
       explanation:   correct ? q.praise : q.explanation,
     });
   };
-
-  const next = () => { setAnswered(false); setFeedback(null); setIdx(i => i + 1); };
 
   const GameComponent = GAME_MAP[q.type];
 

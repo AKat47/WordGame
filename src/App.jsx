@@ -5,7 +5,19 @@ import LessonScreen  from "./screens/LessonScreen";
 import MyWordsScreen from "./screens/MyWordsScreen";
 import StatsScreen   from "./screens/StatsScreen";
 import { loadProgress } from "./utils/progress";
+import { loadUserWords, saveUserWords, syncWordsFromServer } from "./utils/userWords";
+import { VOCAB_BOOKS } from "./data/vocab";
 import { requestNotificationPermission, scheduleDailyReminder } from "./utils/notifications";
+
+/* ── Flatten all built-in vocab into one list (deduped) ─────────── */
+function getVocabSeed() {
+  const seen = new Set(), out = [];
+  for (const book of VOCAB_BOOKS)
+    for (const lesson of book.lessons)
+      for (const w of lesson.words)
+        if (!seen.has(w.word)) { seen.add(w.word); out.push(w); }
+  return out;
+}
 
 const GLOBAL_CSS = `
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -52,6 +64,22 @@ function AppInner() {
   const { theme: t } = useTheme();
   const [screen,   setScreen]   = useState("lesson"); // "lesson" | "mywords" | "stats"
   const [progress, setProgress] = useState(() => loadProgress());
+
+  /* ── Seed / sync words on startup ───────────────────────────────── */
+  useEffect(() => {
+    const local = loadUserWords();
+    syncWordsFromServer().then(server => {
+      const sv = server ?? [];
+      if (sv.length === 0 && local.length === 0) {
+        // Brand-new user — seed with all built-in vocab
+        saveUserWords(getVocabSeed());
+      } else if (sv.length > local.length) {
+        saveUserWords(sv);          // server ahead → pull down
+      } else if (local.length > sv.length) {
+        saveUserWords(local);       // local ahead  → push up
+      }
+    }).catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── Request notification permission + schedule daily reminder ─── */
   useEffect(() => {
