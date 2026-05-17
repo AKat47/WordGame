@@ -58,7 +58,7 @@ function ThemeChooser() {
   );
 }
 
-/* ── Unified horizontal game card (2-column grid) ───────────────── */
+/* ── Game card — full-width single column ────────────────────────── */
 function GameCard({ card, stat, onPlay, disabled }) {
   const { theme: t } = useTheme();
   const [pressed, setPressed] = useState(false);
@@ -77,33 +77,28 @@ function GameCard({ card, stat, onPlay, disabled }) {
         boxShadow: pressed || disabled ? "none" : `0 4px 0 ${played ? t.primaryDeep : t.line}`,
         transform: pressed && !disabled ? "translateY(4px)" : "none",
         transition: "transform 80ms, box-shadow 80ms",
-        padding: "14px 12px",
-        display: "flex", alignItems: "center", gap: 10,
+        padding: "14px 16px",
+        display: "flex", alignItems: "center", gap: 14,
         cursor: disabled ? "default" : "pointer",
         opacity: disabled ? 0.55 : 1,
       }}
     >
-      {/* Emoji badge */}
-      <div style={{
-        width: 44, height: 44, borderRadius: 12, flexShrink: 0,
-        background: played ? t.primarySoft : t.bgDeep,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: 22,
-      }}>
+      {/* Emoji */}
+      <div style={{ fontSize: 32, flexShrink: 0, width: 40, textAlign: "center" }}>
         {card.emoji}
       </div>
 
       {/* Text */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 14, fontWeight: 800, color: t.ink, fontFamily: FONT_SERIF, lineHeight: 1.2 }}>
+        <div style={{ fontSize: 16, fontWeight: 800, color: t.ink, fontFamily: FONT_SERIF }}>
           {card.label}
         </div>
-        <div style={{ fontSize: 11, color: t.inkSoft, marginTop: 3, lineHeight: 1.35 }}>
+        <div style={{ fontSize: 12, color: t.inkSoft, marginTop: 2 }}>
           {card.desc}
         </div>
         {played && (
-          <div style={{ fontSize: 10, color: t.primary, marginTop: 4, fontWeight: 700 }}>
-            ★ {stat.bestAccuracy}% best · {stat.played}×
+          <div style={{ fontSize: 11, color: t.inkFaint, marginTop: 4 }}>
+            ★ {stat.bestAccuracy}% best · {stat.played}× played
           </div>
         )}
       </div>
@@ -112,11 +107,13 @@ function GameCard({ card, stat, onPlay, disabled }) {
       <div style={{
         flexShrink: 0,
         background: t.primarySoft, color: t.primary,
-        fontSize: 10, fontWeight: 800,
-        padding: "3px 7px", borderRadius: 20, letterSpacing: "0.5px",
+        fontSize: 11, fontWeight: 800,
+        padding: "3px 8px", borderRadius: 20, letterSpacing: "0.5px",
       }}>
-        {ROUNDS}
+        {ROUNDS} rds
       </div>
+
+      <Icon name="chevronRight" size={22} color={t.inkFaint}/>
     </div>
   );
 }
@@ -286,19 +283,17 @@ export default function LessonScreen({ onGoAddWords, onGoStats, onProgressChange
         </div>
       )}
 
-      {/* All games — 2-column horizontal grid */}
-      <div style={{ flex: 1, overflow: "auto", padding: "12px 16px 24px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          {ALL_GAMES.map(card => (
-            <GameCard
-              key={card.type}
-              card={card}
-              stat={getGameStat(progress, card.type)}
-              onPlay={hasEnoughWords ? setPlaying : () => {}}
-              disabled={!hasEnoughWords}
-            />
-          ))}
-        </div>
+      {/* All games — single column list */}
+      <div style={{ flex: 1, overflow: "auto", padding: "12px 16px 24px", display: "flex", flexDirection: "column", gap: 10 }}>
+        {ALL_GAMES.map(card => (
+          <GameCard
+            key={card.type}
+            card={card}
+            stat={getGameStat(progress, card.type)}
+            onPlay={hasEnoughWords ? setPlaying : () => {}}
+            disabled={!hasEnoughWords}
+          />
+        ))}
       </div>
     </div>
   );
