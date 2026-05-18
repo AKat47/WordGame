@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTheme } from "../context/ThemeContext";
 import { FONT_SERIF, FONT_SANS } from "../data/themes";
 import { buildTypedQuestions } from "../data/questions";
@@ -19,7 +19,7 @@ const ALL_GAMES = [
   { type: "hangman",     emoji: "🪢", label: "Hangman",       desc: "Guess the word one letter at a time" },
   { type: "unscramble",  emoji: "🔀", label: "Unscramble",    desc: "Rearrange the scrambled letters" },
   { type: "quickmatch",  emoji: "💡", label: "Quick Match",   desc: "Connect words with their meanings" },
-  { type: "memorymatch", emoji: "🧠", label: "Memory Match",  desc: "Flip cards to find word-meaning pairs" },
+  { type: "memorymatch", emoji: "🧠", label: "Memory Match",  desc: "Flip cards to match pairs" },
   { type: "wordhunt",    emoji: "🎯", label: "Word Hunt",     desc: "Find hidden words in the letter grid" },
   { type: "wordmaster",  emoji: "👑", label: "Word Master",   desc: "Fill the blank — no meaning hint" },
   { type: "mix",         emoji: "🎲", label: "Full Mix",      desc: "All game types mixed together" },
@@ -164,33 +164,61 @@ export default function LessonScreen({ onGoAddWords, onGoStats, onProgressChange
   const [synced,     setSynced]     = useState(false);
   const [userWords,  setUserWords]  = useState(() => loadUserWords());
 
+  /* ── Scroll position save/restore when entering/leaving a game ──── */
+  const scrollRef   = useRef(null); // ref to the scrollable list container
+  const savedScroll = useRef(0);
+
   /* ── Always play from user's own word bank ──────────────────────── */
   const activeLesson = { title: "Word Bank", words: userWords };
 
   /* ── Sync progress + user words from MongoDB on mount ───────────── */
   useEffect(() => {
+    let mounted = true; // BUG-01/05: guard against StrictMode double-fire & early unmount
+
     syncFromServer()
       .then(serverData => {
+        if (!mounted) return;
         if (serverData) {
-          localStorage.setItem("wordgarden_progress", JSON.stringify(serverData));
-          setProgress(serverData);
+          // BUG-04: only overwrite local progress if server has equal or more XP
+          const local = loadProgress();
+          if (serverData.xp >= (local.xp ?? 0)) {
+            localStorage.setItem("wordgarden_progress", JSON.stringify(serverData));
+            setProgress(serverData);
+          }
         }
         setSynced(true);
       })
-      .catch(() => setSynced(true));
+      .catch(() => { if (mounted) setSynced(true); });
 
     const localWords = loadUserWords();
     syncWordsFromServer()
       .then(serverWords => {
+        if (!mounted) return;
         if (serverWords && serverWords.length > localWords.length) {
           setUserWords(serverWords);
         }
       })
       .catch(() => {});
+
+    return () => { mounted = false; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const roundCount   = Math.min(ROUNDS, activeLesson.words.length);
   const getQuestions = (type) => buildTypedQuestions(activeLesson, type, roundCount);
+
+  /* Save scroll before entering a game; restore after exiting */
+  const startPlaying = (type) => {
+    savedScroll.current = scrollRef.current?.scrollTop ?? 0;
+    setPlaying(type);
+  };
+
+  const stopPlaying = () => {
+    setPlaying(null);
+    // Restore scroll on next paint after the list re-mounts
+    requestAnimationFrame(() => {
+      if (scrollRef.current) scrollRef.current.scrollTop = savedScroll.current;
+    });
+  };
 
   const handleComplete = (stats) => {
     const updated = recordGameResult(progress, playing, stats);
@@ -205,7 +233,7 @@ export default function LessonScreen({ onGoAddWords, onGoStats, onProgressChange
     return (
       <LessonRunner
         questions={getQuestions(playing)}
-        onExit={() => setPlaying(null)}
+        onExit={stopPlaying}
         onComplete={handleComplete}
       />
     );
@@ -284,13 +312,13 @@ export default function LessonScreen({ onGoAddWords, onGoStats, onProgressChange
       )}
 
       {/* All games — single column list */}
-      <div style={{ flex: 1, overflow: "auto", padding: "12px 16px 24px", display: "flex", flexDirection: "column", gap: 10 }}>
+      <div ref={scrollRef} style={{ flex: 1, overflow: "auto", padding: "12px 16px 24px", display: "flex", flexDirection: "column", gap: 10 }}>
         {ALL_GAMES.map(card => (
           <GameCard
             key={card.type}
             card={card}
             stat={getGameStat(progress, card.type)}
-            onPlay={hasEnoughWords ? setPlaying : () => {}}
+            onPlay={hasEnoughWords ? startPlaying : () => {}}
             disabled={!hasEnoughWords}
           />
         ))}

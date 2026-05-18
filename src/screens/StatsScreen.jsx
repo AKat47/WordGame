@@ -7,13 +7,22 @@ import { saveProgress } from "../utils/progress";
 const DEFAULT_PROGRESS = { xp: 0, gems: 0, streak: 0, lastPlayedDate: null, gameStats: {}, history: [] };
 
 const GAME_LABELS = {
-  picture:    { label: "Picture Match",  emoji: "🖼️" },
-  definition: { label: "Word Meaning",   emoji: "📖" },
-  listen:     { label: "Listen & Tap",   emoji: "🔊" },
-  spell:      { label: "Spell It Out",   emoji: "✏️" },
-  fill:       { label: "Fill the Blank", emoji: "✨" },
-  hangman:    { label: "Hangman",        emoji: "🪢" },
-  mix:        { label: "Full Lesson",    emoji: "🎲" },
+  picture:       { label: "Picture Match",  emoji: "🖼️" },
+  definition:    { label: "Word Meaning",   emoji: "📖" },
+  listen:        { label: "Listen & Tap",   emoji: "🔊" },
+  spell:         { label: "Spell It Out",   emoji: "✏️" },
+  fill:          { label: "Fill the Blank", emoji: "✨" },
+  hangman:       { label: "Hangman",        emoji: "🪢" },
+  unscramble:    { label: "Unscramble",     emoji: "🔀" },
+  flashcard:     { label: "Flashcard",      emoji: "🃏" },
+  wordchallenge: { label: "Word Challenge", emoji: "⚡" },
+  wordmaster:    { label: "Word Master",    emoji: "👑" },
+  wordpuzzle:    { label: "Word Puzzle",    emoji: "🧩" },
+  letterdrop:    { label: "Letter Drop",    emoji: "🔡" },
+  quickmatch:    { label: "Quick Match",    emoji: "💡" },
+  memorymatch:   { label: "Memory Match",   emoji: "🧠" },
+  wordhunt:      { label: "Word Hunt",      emoji: "🎯" },
+  mix:           { label: "Full Mix",       emoji: "🎲" },
 };
 
 /* ── Aggregate a history slice ───────────────────────────────────── */

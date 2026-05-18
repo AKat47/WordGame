@@ -92,6 +92,7 @@ function AddWordSheet({ onAdd, onCancel }) {
         padding: "0 20px 36px", zIndex: 11,
         boxShadow: "0 -8px 32px rgba(0,0,0,0.18)",
         animation: "slideUp 260ms cubic-bezier(.2,1,.3,1)",
+        maxHeight: "90vh", overflowY: "auto",
       }}>
         {/* Handle */}
         <div style={{ display: "flex", justifyContent: "center", padding: "12px 0 4px" }}>

@@ -10,8 +10,9 @@ const ALPHABET = "abcdefghijklmnopqrstuvwxyz".split("");
 function HangmanDrawing({ wrong }) {
   const { theme: t } = useTheme();
   const stroke = { stroke: t.ink, strokeWidth: 3, strokeLinecap: "round" };
+  // Reduced from 160×180 → 130×145 to save vertical space on small screens
   return (
-    <svg viewBox="0 0 160 180" width={160} height={180} style={{ display: "block", margin: "0 auto" }}>
+    <svg viewBox="0 0 160 180" width={130} height={130} style={{ display: "block", margin: "0 auto" }}>
       {/* Gallows */}
       <line x1="20" y1="170" x2="140" y2="170" {...stroke}/>
       <line x1="60" y1="170" x2="60" y2="10"  {...stroke}/>
@@ -72,7 +73,7 @@ export default function HangmanGame({ q, onAnswer, answered }) {
   const heartsLeft = MAX_WRONG - wrong;
 
   return (
-    <div style={{ padding: "8px 20px 20px", display: "flex", flexDirection: "column", gap: 14, fontFamily: FONT_SANS }}>
+    <div style={{ padding: "8px 20px 20px", display: "flex", flexDirection: "column", gap: 10, fontFamily: FONT_SANS, overflowY: "auto" }}>
 
       {/* Prompt */}
       <div>
@@ -125,17 +126,17 @@ export default function HangmanGame({ q, onAnswer, answered }) {
         </div>
       )}
 
-      {/* Alphabet keyboard */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "center" }}>
+      {/* Alphabet keyboard — smaller keys so all 26 fit in 2 rows on narrow screens */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 4, justifyContent: "center" }}>
         {ALPHABET.map(letter => {
           const isGuessed = guessed.has(letter);
           const isCorrect = isGuessed && letters.has(letter);
           const isWrong   = isGuessed && !letters.has(letter);
           return (
             <div key={letter} onClick={() => guess(letter)} style={{
-              width: 36, height: 40, borderRadius: 8,
+              width: 32, height: 36, borderRadius: 7,
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 16, fontWeight: 800, fontFamily: FONT_SERIF,
+              fontSize: 14, fontWeight: 800, fontFamily: FONT_SERIF,
               textTransform: "uppercase",
               background: isCorrect ? t.sage : isWrong ? t.redSoft : t.card,
               border: `2px solid ${isCorrect ? t.sageDeep : isWrong ? t.red : t.line}`,

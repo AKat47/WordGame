@@ -364,8 +364,11 @@ export function buildTypedQuestions(lesson = null, type = "mix", count = 5) {
   }
 
   // Word Hunt: single round with several words hidden in a grid
+  // Only include words that fit in the 8-column grid (≤ 8 characters)
   if (type === "wordhunt") {
-    const huntWords = shuffle(words).slice(0, Math.min(5, words.length));
+    const fittable = words.filter(w => w.word.length <= 8);
+    const pool = fittable.length >= 2 ? fittable : words;
+    const huntWords = shuffle(pool).slice(0, Math.min(5, pool.length));
     return [makeWordHuntQuestion(huntWords)];
   }
 

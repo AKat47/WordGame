@@ -50,13 +50,20 @@ export function loadProgress() {
   }
 }
 
-/** Write to localStorage + fire-and-forget PUT to Mongo. */
+/* ── Debounce timer for remote writes ──────────────────────────── */
+let _pushTimer = null;
+const PUSH_DEBOUNCE_MS = 1500;
+
+/** Write to localStorage + debounced fire-and-forget PUT to Mongo. */
 export function saveProgress(progress) {
   // 1. Synchronous local write — never blocks the UI
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(progress)); } catch { /* ignore */ }
 
-  // 2. Async remote write — silently swallowed on failure (offline / server down)
-  pushToServer(progress).catch(() => {});
+  // 2. Debounced remote write — coalesces rapid saves into one PUT
+  clearTimeout(_pushTimer);
+  _pushTimer = setTimeout(() => {
+    pushToServer(progress).catch(() => {});
+  }, PUSH_DEBOUNCE_MS);
 }
 
 /* ── Server helpers ─────────────────────────────────────────────── */
